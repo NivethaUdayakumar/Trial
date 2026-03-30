@@ -1,0 +1,117 @@
+## Endpoint
+
+`POST /api/saveHtml`
+
+## Payload
+
+```json
+{
+  "path": "PX/BCPU/TPPA/report1.html",
+  "html_content": "<html><body>Hello</body></html>"
+}
+```
+
+## `server.js`
+
+### 1. Add helper to read POST body
+
+```javascript
+function parseRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 10 * 1024 * 1024) { // 10MB limit
+        reject(new Error('Payload too large'));
+        req.destroy();
+      }
+    });
+
+    req.on('end', () => {
+      try {
+        const parsed = JSON.parse(body || '{}');
+        resolve(parsed);
+      } catch (err) {
+        reject(new Error('Invalid JSON'));
+      }
+    });
+  });
+}
+```
+
+### 2. Add handler
+
+```javascript
+async function handleSaveHtml(req, res) {
+  try {
+    const body = await parseRequestBody(req);
+
+    const requestedPath = body.path;
+    const htmlContent = body.html_content;
+
+    if (!requestedPath || !htmlContent) {
+      sendJson(res, 400, { error: 'Missing path or html_content' });
+      return;
+    }
+
+    if (!requestedPath.endsWith('.html')) {
+      sendJson(res, 400, { error: 'Only .html files allowed' });
+      return;
+    }
+
+    const absPath = safeResolve(DATA_ROOT, requestedPath);
+
+    // Ensure directory exists
+    const dir = path.dirname(absPath);
+    fs.mkdirSync(dir, { recursive: true });
+
+    // Write file
+    fs.writeFileSync(absPath, htmlContent, 'utf8');
+
+    sendJson(res, 200, {
+      message: 'HTML saved successfully',
+      path: requestedPath,
+      absolutePath: absPath
+    });
+
+  } catch (err) {
+    sendJson(res, 400, { error: err.message || 'Failed to save HTML' });
+  }
+}
+```
+
+### 3. Register route inside `handleRequest`
+
+Add above static file handling:
+
+```javascript
+if (req.method === 'POST' && pathname === '/api/saveHtml') {
+  handleSaveHtml(req, res);
+  return;
+}
+```
+
+## Final API Flow
+
+### Save HTML
+
+```
+POST /api/saveHtml
+```
+
+### Example fetch call (frontend)
+
+```javascript
+await fetch('/api/saveHtml', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    path: 'PX/BCPU/TPPA/report1.html',
+    html_content: '<html><body>Report</body></html>'
+  })
+});
+```
+
