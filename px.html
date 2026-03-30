@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML Content Viewer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f8fa;
+      color: #222;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+
+    .sidebar {
+      width: 20%;
+      min-width: 260px;
+      background: #ffffff;
+      border-right: 1px solid #d9dee7;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .viewer {
+      width: 80%;
+      background: #ffffff;
+      padding: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 18px;
+      font-size: 20px;
+      color: #1f2937;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 18px 0 8px;
+      color: #374151;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #4b5563;
+    }
+
+    select,
+    button,
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #cfd6e4;
+      border-radius: 8px;
+      background: #fff;
+      color: #111827;
+      margin-bottom: 12px;
+    }
+
+    select:disabled,
+    button:disabled {
+      background: #f3f4f6;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    .path-box {
+      font-size: 12px;
+      color: #4b5563;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    .viewer-header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .viewer-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .status {
+      font-size: 13px;
+      color: #6b7280;
+      min-height: 18px;
+    }
+
+    iframe {
+      width: 100%;
+      flex: 1;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background: white;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>HTML Selector</h2>
+
+      <div class="section-title">Base Directory</div>
+      <label for="baseDir">Base Dir</label>
+      <input id="baseDir" type="text" value="PX" />
+
+      <div class="section-title">Block Information</div>
+      <label for="blockSelect">Block</label>
+      <select id="blockSelect">
+        <option value="">Select Block</option>
+      </select>
+
+      <div class="section-title">Flow Type</div>
+      <label for="flowTypeSelect">Flow Type</label>
+      <select id="flowTypeSelect">
+        <option value="">Select Flow Type</option>
+        <option value="TPPA">TPPA</option>
+        <option value="S2S">S2S</option>
+        <option value="DHRYSTONE">DHRYSTONE</option>
+        <option value="IMAX">IMAX</option>
+      </select>
+
+      <div id="imaxTypeWrap" class="hidden">
+        <label for="imaxTypeSelect">IMAX Type</label>
+        <select id="imaxTypeSelect">
+          <option value="">Select IMAX Type</option>
+          <option value="VPROC">VPROC</option>
+          <option value="VSRAM">VSRAM</option>
+        </select>
+      </div>
+
+      <div id="patternWrap" class="hidden">
+        <label for="patternSelect">Pattern</label>
+        <select id="patternSelect">
+          <option value="">Select Pattern</option>
+        </select>
+      </div>
+
+      <div id="releaseWrap" class="hidden">
+        <label for="releaseSelect">Release Version</label>
+        <select id="releaseSelect">
+          <option value="">Select Release Version</option>
+        </select>
+      </div>
+
+      <div id="csvWrap" class="hidden">
+        <label for="csvSelect">CSV File Name</label>
+        <select id="csvSelect">
+          <option value="">Select CSV File Name</option>
+        </select>
+      </div>
+
+      <button id="viewBtn" disabled>View</button>
+
+      <div class="section-title">Resolved Path</div>
+      <div id="resolvedPath" class="path-box"></div>
+    </div>
+
+    <div class="viewer">
+      <div class="viewer-header">
+        <div class="viewer-title">HTML Content Viewer</div>
+        <div id="status" class="status">Select values and click View</div>
+      </div>
+      <iframe id="htmlFrame"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const baseDirInput = document.getElementById('baseDir');
+    const blockSelect = document.getElementById('blockSelect');
+    const flowTypeSelect = document.getElementById('flowTypeSelect');
+    const imaxTypeSelect = document.getElementById('imaxTypeSelect');
+    const patternSelect = document.getElementById('patternSelect');
+    const releaseSelect = document.getElementById('releaseSelect');
+    const csvSelect = document.getElementById('csvSelect');
+
+    const imaxTypeWrap = document.getElementById('imaxTypeWrap');
+    const patternWrap = document.getElementById('patternWrap');
+    const releaseWrap = document.getElementById('releaseWrap');
+    const csvWrap = document.getElementById('csvWrap');
+
+    const viewBtn = document.getElementById('viewBtn');
+    const resolvedPath = document.getElementById('resolvedPath');
+    const statusEl = document.getElementById('status');
+    const htmlFrame = document.getElementById('htmlFrame');
+
+    function clearSelect(select, placeholder) {
+      select.innerHTML = '';
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = placeholder;
+      select.appendChild(option);
+    }
+
+    function setOptions(select, values, placeholder) {
+      clearSelect(select, placeholder);
+      values.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
+
+    function hideAllConditionalFields() {
+      imaxTypeWrap.classList.add('hidden');
+      patternWrap.classList.add('hidden');
+      releaseWrap.classList.add('hidden');
+      csvWrap.classList.add('hidden');
+
+      clearSelect(patternSelect, 'Select Pattern');
+      clearSelect(releaseSelect, 'Select Release Version');
+      clearSelect(csvSelect, 'Select CSV File Name');
+      imaxTypeSelect.value = '';
+    }
+
+    async function fetchDirList(path) {
+      const response = await fetch('/api/listDirs?path=' + encodeURIComponent(path));
+      if (!response.ok) {
+        throw new Error('Failed to list directory: ' + path);
+      }
+      return await response.json();
+    }
+
+    function getSelectedPath() {
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const flow = flowTypeSelect.value;
+      const imaxType = imaxTypeSelect.value;
+      const pattern = patternSelect.value;
+      const release = releaseSelect.value;
+      const csv = csvSelect.value;
+
+      if (!block || !flow) return '';
+
+      if (flow === 'TPPA' || flow === 'S2S') {
+        if (!csv) return '';
+        return `${baseDir}/${block}/${flow}/${csv}`;
+      }
+
+      if (flow === 'DHRYSTONE') {
+        if (!release || !csv) return '';
+        return `${baseDir}/${block}/DHRYSTONE/${release}/${csv}`;
+      }
+
+      if (flow === 'IMAX') {
+        if (!imaxType || !pattern || !release || !csv) return '';
+        return `${baseDir}/${block}/IMAX/${imaxType}/${pattern}/${release}/${csv}`;
+      }
+
+      return '';
+    }
+
+    function updateResolvedPath() {
+      const path = getSelectedPath();
+      resolvedPath.textContent = path || '';
+      viewBtn.disabled = !path;
+    }
+
+    async function loadBlocks() {
+      try {
+        const baseDir = baseDirInput.value.trim() || 'PX';
+        const data = await fetchDirList(baseDir);
+        setOptions(blockSelect, data.dirs || [], 'Select Block');
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function handleFlowChange() {
+      hideAllConditionalFields();
+      updateResolvedPath();
+
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const flow = flowTypeSelect.value;
+
+      if (!block || !flow) return;
+
+      try {
+        if (flow === 'TPPA' || flow === 'S2S') {
+          csvWrap.classList.remove('hidden');
+          const path = `${baseDir}/${block}/${flow}`;
+          const data = await fetchDirList(path);
+          const htmlFiles = (data.files || []).filter(name => name.toLowerCase().endsWith('.html'));
+          setOptions(csvSelect, htmlFiles, 'Select CSV File Name');
+        }
+
+        if (flow === 'DHRYSTONE') {
+          releaseWrap.classList.remove('hidden');
+          const path = `${baseDir}/${block}/DHRYSTONE`;
+          const data = await fetchDirList(path);
+          setOptions(releaseSelect, data.dirs || [], 'Select Release Version');
+        }
+
+        if (flow === 'IMAX') {
+          imaxTypeWrap.classList.remove('hidden');
+        }
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function handleReleaseChange() {
+      updateResolvedPath();
+
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const flow = flowTypeSelect.value;
+      const release = releaseSelect.value;
+
+      if (flow !== 'DHRYSTONE' || !block || !release) return;
+
+      try {
+        csvWrap.classList.remove('hidden');
+        const path = `${baseDir}/${block}/DHRYSTONE/${release}`;
+        const data = await fetchDirList(path);
+        const htmlFiles = (data.files || []).filter(name => name.toLowerCase().endsWith('.html'));
+        setOptions(csvSelect, htmlFiles, 'Select CSV File Name');
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function handleImaxTypeChange() {
+      patternWrap.classList.add('hidden');
+      releaseWrap.classList.add('hidden');
+      csvWrap.classList.add('hidden');
+      clearSelect(patternSelect, 'Select Pattern');
+      clearSelect(releaseSelect, 'Select Release Version');
+      clearSelect(csvSelect, 'Select CSV File Name');
+      updateResolvedPath();
+
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const imaxType = imaxTypeSelect.value;
+
+      if (!block || !imaxType) return;
+
+      try {
+        patternWrap.classList.remove('hidden');
+        const path = `${baseDir}/${block}/IMAX/${imaxType}`;
+        const data = await fetchDirList(path);
+        setOptions(patternSelect, data.dirs || [], 'Select Pattern');
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function handlePatternChange() {
+      releaseWrap.classList.add('hidden');
+      csvWrap.classList.add('hidden');
+      clearSelect(releaseSelect, 'Select Release Version');
+      clearSelect(csvSelect, 'Select CSV File Name');
+      updateResolvedPath();
+
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const imaxType = imaxTypeSelect.value;
+      const pattern = patternSelect.value;
+
+      if (!block || !imaxType || !pattern) return;
+
+      try {
+        releaseWrap.classList.remove('hidden');
+        const path = `${baseDir}/${block}/IMAX/${imaxType}/${pattern}`;
+        const data = await fetchDirList(path);
+        setOptions(releaseSelect, data.dirs || [], 'Select Release Version');
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function handleImaxReleaseChange() {
+      csvWrap.classList.add('hidden');
+      clearSelect(csvSelect, 'Select CSV File Name');
+      updateResolvedPath();
+
+      const baseDir = baseDirInput.value.trim() || 'PX';
+      const block = blockSelect.value;
+      const imaxType = imaxTypeSelect.value;
+      const pattern = patternSelect.value;
+      const release = releaseSelect.value;
+
+      if (!block || !imaxType || !pattern || !release) return;
+
+      try {
+        csvWrap.classList.remove('hidden');
+        const path = `${baseDir}/${block}/IMAX/${imaxType}/${pattern}/${release}`;
+        const data = await fetchDirList(path);
+        const htmlFiles = (data.files || []).filter(name => name.toLowerCase().endsWith('.html'));
+        setOptions(csvSelect, htmlFiles, 'Select CSV File Name');
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    }
+
+    async function viewHtml() {
+      const path = getSelectedPath();
+      if (!path) return;
+
+      resolvedPath.textContent = path;
+      statusEl.textContent = 'Loading: ' + path;
+
+      try {
+        const response = await fetch('/api/readHtml?path=' + encodeURIComponent(path));
+        if (!response.ok) {
+          throw new Error('Failed to load HTML');
+        }
+
+        const data = await response.json();
+        htmlFrame.srcdoc = data.content || '';
+        statusEl.textContent = 'Loaded: ' + path;
+      } catch (err) {
+        htmlFrame.srcdoc = '<h3 style="font-family:Arial;padding:20px;">Failed to load HTML content</h3>';
+        statusEl.textContent = err.message;
+      }
+    }
+
+    baseDirInput.addEventListener('change', async () => {
+      hideAllConditionalFields();
+      clearSelect(blockSelect, 'Select Block');
+      flowTypeSelect.value = '';
+      updateResolvedPath();
+      await loadBlocks();
+    });
+
+    blockSelect.addEventListener('change', async () => {
+      hideAllConditionalFields();
+      flowTypeSelect.value = '';
+      updateResolvedPath();
+    });
+
+    flowTypeSelect.addEventListener('change', handleFlowChange);
+    releaseSelect.addEventListener('change', async () => {
+      if (flowTypeSelect.value === 'DHRYSTONE') {
+        await handleReleaseChange();
+      } else if (flowTypeSelect.value === 'IMAX') {
+        await handleImaxReleaseChange();
+      }
+      updateResolvedPath();
+    });
+    imaxTypeSelect.addEventListener('change', handleImaxTypeChange);
+    patternSelect.addEventListener('change', handlePatternChange);
+    csvSelect.addEventListener('change', updateResolvedPath);
+    viewBtn.addEventListener('click', viewHtml);
+
+    loadBlocks();
+  </script>
+</body>
+</html>
