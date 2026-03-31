@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF 8" />
+  <meta name="viewport" content="width=device width, initial scale=1.0" />
+  <title>Graph Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f5f6f8;
+      color: #222;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .menu {
+      width: 20%;
+      min-width: 280px;
+      max-width: 360px;
+      background: #ffffff;
+      border-right: 1px solid #d9dde3;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .viewer {
+      width: 80%;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .section {
+      margin-bottom: 18px;
+      padding: 14px;
+      border: 1px solid #e1e5ea;
+      border-radius: 10px;
+      background: #fafbfc;
+    }
+
+    .section h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #c8ced6;
+      border-radius: 8px;
+      background: #fff;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-size: 12px;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #1f6feb;
+      color: white;
+    }
+
+    button.secondary {
+      background: #6b7280;
+    }
+
+    .checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chip {
+      background: #fff;
+      border: 1px solid #d7dce3;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 10px;
+    }
+
+    .notice {
+      padding: 10px 12px;
+      background: #fff8db;
+      border: 1px solid #f1df85;
+      border-radius: 8px;
+      font-size: 10px;
+      margin-bottom: 14px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .graph-card {
+      background: white;
+      border: 1px solid #dfe3e8;
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .graph-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .chart-wrap {
+      border-radius: 12px;
+      padding: 0px;
+      min-height: 280px;
+    }
+
+    .chart-wrap canvas {
+      width: 100% !important;
+      height: 260px !important;
+    }
+
+    .side-panel {
+      background: #fbfbfc;
+      border: 1px solid #e6e9ee;
+      border-radius: 12px;
+      padding: 10px;
+      max-width: 220px;
+      min-width: 220px;
+      width: 220px;
+    }
+
+    .legend-boxes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .legend-item {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 2px solid #111;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: 0.2s;
+    }
+
+    .legend-item.active {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .run-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 8px 0 6px 0;
+      word-break: break-word;
+    }
+
+    .run-sub {
+      font-size: 11px;
+      color: #495365;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #cfd6df;
+      padding: 7px 8px;
+      text-align: center;
+    }
+
+    th {
+      background: #eef2f7;
+      font-weight: 700;
+    }
+
+    .empty {
+      background: white;
+      border: 1px dashed #cfd6df;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      color: #5b6470;
+      grid-column: 1 / -1;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #5b6470;
+    }
+
+    @media (max-width: 1500px) {
+      .graph-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .menu {
+        width: 28%;
+      }
+
+      .viewer {
+        width: 72%;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        flex-direction: column;
+      }
+
+      .menu,
+      .viewer {
+        width: 100%;
+        max-width: none;
+      }
+
+      .menu {
+        min-width: 0;
+        border-right: 0;
+        border-bottom: 1px solid #d9dde3;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="menu">
+      <div class="title">Graph Viewer</div>
+
+      <div class="section">
+        <h3>Filters</h3>
+
+        <label for="userInput">User</label>
+        <input id="userInput" type="text" value="user1" placeholder="Enter user" />
+
+        <label for="watchlistSelect">Watchlist</label>
+        <select id="watchlistSelect"></select>
+
+        <label for="blockSelect">Block</label>
+        <select id="blockSelect"></select>
+
+        <div class="btn-row">
+          <button id="applyBtn">Apply</button>
+          <button id="reloadBtn" class="secondary">Reload</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Graphs</h3>
+        <div class="checkbox-list" id="pathgroupCheckboxes"></div>
+      </div>
+    </div>
+
+    <div class="viewer">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="chip" id="summaryChip">No data loaded</div>
+          <div class="chip" id="sourceChip">Source: unknown</div>
+        </div>
+      </div>
+
+      <div id="noticeArea"></div>
+      <div class="cards" id="cardsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    const FALLBACK_DATA = {
+      "user1-mainlist-APR-BCPU-r1": {
+        "ID": "bcpu_r1",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL04",
+        "PLACE_WNS": ["all:0.002", "crit_r2out:0.001", "default:0.000", "from_mem:0.000", "leaf_icg:0.000"],
+        "PLACE_TNS": ["all:0.023", "crit_r2out:0.012", "default:0.000", "from_mem:0.000", "leaf_icg:0.000"],
+        "PLACE_NVP": ["all:123", "crit_r2out:33", "default:0", "from_mem:0", "leaf_icg:0"],
+        "CLOCK_WNS": ["all:0.013", "crit_r2out:0.010", "default:0.000", "from_mem:0.005", "leaf_icg:0.002"],
+        "CLOCK_TNS": ["all:3.168", "crit_r2out:1.120", "default:0.000", "from_mem:0.800", "leaf_icg:0.200"],
+        "CLOCK_NVP": ["all:327", "crit_r2out:88", "default:0", "from_mem:44", "leaf_icg:12"],
+        "ROUTE_WNS": ["all:0.012", "crit_r2out:0.009", "default:0.000", "from_mem:0.003", "leaf_icg:0.001"],
+        "ROUTE_TNS": ["all:2.527", "crit_r2out:0.930", "default:0.000", "from_mem:0.450", "leaf_icg:0.110"],
+        "ROUTE_NVP": ["all:283", "crit_r2out:64", "default:0", "from_mem:25", "leaf_icg:7"],
+        "WNS": ["0.002", "0.013", "0.012"],
+        "TNS": ["0.023", "3.168", "2.527"],
+        "NVP": ["123", "327", "283"],
+        "PLACE_date": "12/27/2025",
+        "CLOCK_date": "12/30/2025",
+        "ROUTE_date": "01/04/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "apr.csv",
+        "Timestamp": "2026-01-20T06:05:31.617Z"
+      },
+
+      "user1-mainlist-APR-BCPU-r2": {
+        "ID": "bcpu_r2",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL05",
+        "PLACE_WNS": ["all:0.004", "crit_r2out:0.002", "default:0.000", "from_mem:0.001", "leaf_icg:0.000"],
+        "PLACE_TNS": ["all:0.041", "crit_r2out:0.017", "default:0.000", "from_mem:0.003", "leaf_icg:0.000"],
+        "PLACE_NVP": ["all:118", "crit_r2out:29", "default:0", "from_mem:2", "leaf_icg:0"],
+        "CLOCK_WNS": ["all:0.015", "crit_r2out:0.012", "default:0.000", "from_mem:0.006", "leaf_icg:0.003"],
+        "CLOCK_TNS": ["all:3.860", "crit_r2out:1.450", "default:0.000", "from_mem:0.920", "leaf_icg:0.260"],
+        "CLOCK_NVP": ["all:311", "crit_r2out:79", "default:0", "from_mem:40", "leaf_icg:14"],
+        "ROUTE_WNS": ["all:0.014", "crit_r2out:0.011", "default:0.000", "from_mem:0.004", "leaf_icg:0.002"],
+        "ROUTE_TNS": ["all:2.940", "crit_r2out:1.010", "default:0.000", "from_mem:0.510", "leaf_icg:0.140"],
+        "ROUTE_NVP": ["all:260", "crit_r2out:57", "default:0", "from_mem:21", "leaf_icg:9"],
+        "WNS": ["0.004", "0.015", "0.014"],
+        "TNS": ["0.041", "3.860", "2.940"],
+        "NVP": ["118", "311", "260"],
+        "PLACE_date": "12/28/2025",
+        "CLOCK_date": "12/31/2025",
+        "ROUTE_date": "01/05/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "apr.csv",
+        "Timestamp": "2026-01-21T08:20:11.000Z"
+      },
+
+      "user1-mainlist-APR-BCPU-r3": {
+        "ID": "bcpu_r3",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL06",
+        "PLACE_WNS": ["all:0.003", "crit_r2out:0.001", "default:0.000", "from_mem:0.000", "leaf_icg:0.000"],
+        "PLACE_TNS": ["all:0.030", "crit_r2out:0.010", "default:0.000", "from_mem:0.000", "leaf_icg:0.000"],
+        "PLACE_NVP": ["all:121", "crit_r2out:26", "default:0", "from_mem:0", "leaf_icg:0"],
+        "CLOCK_WNS": ["all:0.021", "crit_r2out:0.017", "default:0.000", "from_mem:0.008", "leaf_icg:0.003"],
+        "CLOCK_TNS": ["all:5.000", "crit_r2out:1.910", "default:0.000", "from_mem:1.140", "leaf_icg:0.310"],
+        "CLOCK_NVP": ["all:356", "crit_r2out:99", "default:0", "from_mem:46", "leaf_icg:16"],
+        "ROUTE_WNS": ["all:0.025", "crit_r2out:0.020", "default:0.000", "from_mem:0.005", "leaf_icg:0.002"],
+        "ROUTE_TNS": ["all:6.000", "crit_r2out:2.400", "default:0.000", "from_mem:0.700", "leaf_icg:0.200"],
+        "ROUTE_NVP": ["all:340", "crit_r2out:85", "default:0", "from_mem:28", "leaf_icg:8"],
+        "WNS": ["0.003", "0.021", "0.025"],
+        "TNS": ["0.030", "5.000", "6.000"],
+        "NVP": ["121", "356", "340"],
+        "PLACE_date": "12/29/2025",
+        "CLOCK_date": "01/01/2026",
+        "ROUTE_date": "01/06/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "apr.csv",
+        "Timestamp": "2026-01-22T10:10:10.000Z"
+      },
+
+      "user1-watchlist2-APR-BCPU-r1": {
+        "ID": "bcpu_w2_r1",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL07",
+        "PLACE_WNS": ["all:-0.005", "crit_r2out:-0.009", "default:0.000", "from_mem:-0.001"],
+        "PLACE_TNS": ["all:-0.700", "crit_r2out:-0.290", "default:0.000", "from_mem:-0.050"],
+        "PLACE_NVP": ["all:140", "crit_r2out:44", "default:0", "from_mem:6"],
+        "CLOCK_WNS": ["all:0.006", "crit_r2out:0.003", "default:0.000", "from_mem:0.002"],
+        "CLOCK_TNS": ["all:1.200", "crit_r2out:0.520", "default:0.000", "from_mem:0.110"],
+        "CLOCK_NVP": ["all:208", "crit_r2out:53", "default:0", "from_mem:11"],
+        "ROUTE_WNS": ["all:0.001", "crit_r2out:-0.002", "default:0.000", "from_mem:0.000"],
+        "ROUTE_TNS": ["all:0.400", "crit_r2out:-0.100", "default:0.000", "from_mem:0.020"],
+        "ROUTE_NVP": ["all:144", "crit_r2out:38", "default:0", "from_mem:4"],
+        "WNS": ["-0.005", "0.006", "0.001"],
+        "TNS": ["-0.700", "1.200", "0.400"],
+        "NVP": ["140", "208", "144"],
+        "PLACE_date": "01/02/2026",
+        "CLOCK_date": "01/03/2026",
+        "ROUTE_date": "01/04/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "apr_watch2.csv",
+        "Timestamp": "2026-01-22T12:00:00.000Z"
+      },
+
+      "user1-watchlist2-APR-LCPU-r1": {
+        "ID": "lcpu_w2_r1",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL07",
+        "PLACE_WNS": ["all:0.008", "crit_r2out:0.003", "default:0.000", "reg2reg:0.001"],
+        "PLACE_TNS": ["all:0.090", "crit_r2out:0.030", "default:0.000", "reg2reg:0.012"],
+        "PLACE_NVP": ["all:160", "crit_r2out:40", "default:0", "reg2reg:8"],
+        "CLOCK_WNS": ["all:0.020", "crit_r2out:0.011", "default:0.000", "reg2reg:0.005"],
+        "CLOCK_TNS": ["all:2.900", "crit_r2out:1.020", "default:0.000", "reg2reg:0.320"],
+        "CLOCK_NVP": ["all:280", "crit_r2out:72", "default:0", "reg2reg:18"],
+        "ROUTE_WNS": ["all:0.018", "crit_r2out:0.008", "default:0.000", "reg2reg:0.004"],
+        "ROUTE_TNS": ["all:2.300", "crit_r2out:0.830", "default:0.000", "reg2reg:0.230"],
+        "ROUTE_NVP": ["all:210", "crit_r2out:60", "default:0", "reg2reg:14"],
+        "WNS": ["0.008", "0.020", "0.018"],
+        "TNS": ["0.090", "2.900", "2.300"],
+        "NVP": ["160", "280", "210"],
+        "PLACE_date": "01/03/2026",
+        "CLOCK_date": "01/04/2026",
+        "ROUTE_date": "01/05/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "lcpu_apr.csv",
+        "Timestamp": "2026-01-23T09:30:00.000Z"
+      },
+
+      "user1-mainlist-APR-LCPU-r2": {
+        "ID": "lcpu_r2",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL08",
+        "PLACE_WNS": ["all:0.006", "crit_r2out:0.002", "default:0.000", "reg2reg:0.001"],
+        "PLACE_TNS": ["all:0.051", "crit_r2out:0.021", "default:0.000", "reg2reg:0.010"],
+        "PLACE_NVP": ["all:150", "crit_r2out:34", "default:0", "reg2reg:7"],
+        "CLOCK_WNS": ["all:0.017", "crit_r2out:0.010", "default:0.000", "reg2reg:0.004"],
+        "CLOCK_TNS": ["all:2.510", "crit_r2out:0.980", "default:0.000", "reg2reg:0.280"],
+        "CLOCK_NVP": ["all:290", "crit_r2out:69", "default:0", "reg2reg:16"],
+        "ROUTE_WNS": ["all:0.014", "crit_r2out:0.007", "default:0.000", "reg2reg:0.003"],
+        "ROUTE_TNS": ["all:1.970", "crit_r2out:0.740", "default:0.000", "reg2reg:0.190"],
+        "ROUTE_NVP": ["all:235", "crit_r2out:58", "default:0", "reg2reg:13"],
+        "WNS": ["0.006", "0.017", "0.014"],
+        "TNS": ["0.051", "2.510", "1.970"],
+        "NVP": ["150", "290", "235"],
+        "PLACE_date": "01/04/2026",
+        "CLOCK_date": "01/05/2026",
+        "ROUTE_date": "01/06/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "lcpu_main.csv",
+        "Timestamp": "2026-01-24T07:40:00.000Z"
+      },
+
+      "user2-mainlist-APR-MCU-r1": {
+        "ID": "mcu_r1",
+        "Milestone": "MCU_V20251002_FDI",
+        "DFT Release": "REL02",
+        "PLACE_WNS": ["all:-0.011", "crit_r2out:-0.018", "default:0.000", "from_mem:-0.004"],
+        "PLACE_TNS": ["all:-1.430", "crit_r2out:-0.550", "default:0.000", "from_mem:-0.120"],
+        "PLACE_NVP": ["all:220", "crit_r2out:61", "default:0", "from_mem:11"],
+        "CLOCK_WNS": ["all:-0.003", "crit_r2out:-0.007", "default:0.000", "from_mem:-0.001"],
+        "CLOCK_TNS": ["all:-0.320", "crit_r2out:-0.120", "default:0.000", "from_mem:-0.030"],
+        "CLOCK_NVP": ["all:180", "crit_r2out:42", "default:0", "from_mem:9"],
+        "ROUTE_WNS": ["all:0.002", "crit_r2out:-0.001", "default:0.000", "from_mem:0.000"],
+        "ROUTE_TNS": ["all:0.210", "crit_r2out:-0.030", "default:0.000", "from_mem:0.000"],
+        "ROUTE_NVP": ["all:130", "crit_r2out:34", "default:0", "from_mem:5"],
+        "WNS": ["-0.011", "-0.003", "0.002"],
+        "TNS": ["-1.430", "-0.320", "0.210"],
+        "NVP": ["220", "180", "130"],
+        "PLACE_date": "01/01/2026",
+        "CLOCK_date": "01/02/2026",
+        "ROUTE_date": "01/03/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "mcu_apr.csv",
+        "Timestamp": "2026-01-20T11:00:00.000Z"
+      },
+
+      "user2-mainlist-APR-MCU-r2": {
+        "ID": "mcu_r2",
+        "Milestone": "MCU_V20251002_FDI",
+        "DFT Release": "REL03",
+        "PLACE_WNS": ["all:-0.006", "crit_r2out:-0.010", "default:0.000", "from_mem:-0.002"],
+        "PLACE_TNS": ["all:-0.910", "crit_r2out:-0.370", "default:0.000", "from_mem:-0.070"],
+        "PLACE_NVP": ["all:198", "crit_r2out:56", "default:0", "from_mem:8"],
+        "CLOCK_WNS": ["all:0.001", "crit_r2out:-0.002", "default:0.000", "from_mem:0.000"],
+        "CLOCK_TNS": ["all:0.110", "crit_r2out:-0.040", "default:0.000", "from_mem:0.000"],
+        "CLOCK_NVP": ["all:164", "crit_r2out:37", "default:0", "from_mem:7"],
+        "ROUTE_WNS": ["all:0.007", "crit_r2out:0.003", "default:0.000", "from_mem:0.001"],
+        "ROUTE_TNS": ["all:0.650", "crit_r2out:0.190", "default:0.000", "from_mem:0.030"],
+        "ROUTE_NVP": ["all:122", "crit_r2out:29", "default:0", "from_mem:4"],
+        "WNS": ["-0.006", "0.001", "0.007"],
+        "TNS": ["-0.910", "0.110", "0.650"],
+        "NVP": ["198", "164", "122"],
+        "PLACE_date": "01/02/2026",
+        "CLOCK_date": "01/03/2026",
+        "ROUTE_date": "01/04/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "mcu_apr.csv",
+        "Timestamp": "2026-01-21T11:15:00.000Z"
+      },
+
+      "user2-watchlist2-APR-LCPU-r1": {
+        "ID": "user2_lcpu_r1",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL01",
+        "PLACE_WNS": ["all:0.001", "crit_r2out:-0.002", "default:0.000", "reg2reg:0.000"],
+        "PLACE_TNS": ["all:0.013", "crit_r2out:-0.050", "default:0.000", "reg2reg:0.000"],
+        "PLACE_NVP": ["all:132", "crit_r2out:31", "default:0", "reg2reg:3"],
+        "CLOCK_WNS": ["all:0.009", "crit_r2out:0.004", "default:0.000", "reg2reg:0.002"],
+        "CLOCK_TNS": ["all:1.540", "crit_r2out:0.480", "default:0.000", "reg2reg:0.100"],
+        "CLOCK_NVP": ["all:210", "crit_r2out:55", "default:0", "reg2reg:9"],
+        "ROUTE_WNS": ["all:0.011", "crit_r2out:0.006", "default:0.000", "reg2reg:0.003"],
+        "ROUTE_TNS": ["all:1.880", "crit_r2out:0.650", "default:0.000", "reg2reg:0.170"],
+        "ROUTE_NVP": ["all:198", "crit_r2out:49", "default:0", "reg2reg:11"],
+        "WNS": ["0.001", "0.009", "0.011"],
+        "TNS": ["0.013", "1.540", "1.880"],
+        "NVP": ["132", "210", "198"],
+        "PLACE_date": "01/05/2026",
+        "CLOCK_date": "01/06/2026",
+        "ROUTE_date": "01/07/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "u2_lcpu.csv",
+        "Timestamp": "2026-01-25T10:00:00.000Z"
+      },
+
+      "user2-watchlist2-APR-LCPU-r2": {
+        "ID": "user2_lcpu_r2",
+        "Milestone": "LCPU_V20250926_FDI",
+        "DFT Release": "REL02",
+        "PLACE_WNS": ["all:-0.002", "crit_r2out:-0.004", "default:0.000", "reg2reg:-0.001"],
+        "PLACE_TNS": ["all:-0.180", "crit_r2out:-0.090", "default:0.000", "reg2reg:-0.020"],
+        "PLACE_NVP": ["all:141", "crit_r2out:38", "default:0", "reg2reg:5"],
+        "CLOCK_WNS": ["all:0.005", "crit_r2out:0.001", "default:0.000", "reg2reg:0.001"],
+        "CLOCK_TNS": ["all:0.860", "crit_r2out:0.240", "default:0.000", "reg2reg:0.060"],
+        "CLOCK_NVP": ["all:205", "crit_r2out:49", "default:0", "reg2reg:8"],
+        "ROUTE_WNS": ["all:0.008", "crit_r2out:0.004", "default:0.000", "reg2reg:0.002"],
+        "ROUTE_TNS": ["all:1.100", "crit_r2out:0.390", "default:0.000", "reg2reg:0.090"],
+        "ROUTE_NVP": ["all:186", "crit_r2out:45", "default:0", "reg2reg:9"],
+        "WNS": ["-0.002", "0.005", "0.008"],
+        "TNS": ["-0.180", "0.860", "1.100"],
+        "NVP": ["141", "205", "186"],
+        "PLACE_date": "01/06/2026",
+        "CLOCK_date": "01/07/2026",
+        "ROUTE_date": "01/08/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "u2_lcpu.csv",
+        "Timestamp": "2026-01-26T10:20:00.000Z"
+      },
+
+      "user2-mainlist-APR-BCPU-r1": {
+        "ID": "user2_bcpu_r1",
+        "Milestone": "BCPU_V20251010_FDI",
+        "DFT Release": "REL09",
+        "PLACE_WNS": ["all:0.010", "crit_r2out:0.004", "default:0.000", "from_mem:0.001"],
+        "PLACE_TNS": ["all:0.120", "crit_r2out:0.041", "default:0.000", "from_mem:0.009"],
+        "PLACE_NVP": ["all:170", "crit_r2out:46", "default:0", "from_mem:7"],
+        "CLOCK_WNS": ["all:0.028", "crit_r2out:0.014", "default:0.000", "from_mem:0.006"],
+        "CLOCK_TNS": ["all:4.300", "crit_r2out:1.530", "default:0.000", "from_mem:0.480"],
+        "CLOCK_NVP": ["all:330", "crit_r2out:91", "default:0", "from_mem:19"],
+        "ROUTE_WNS": ["all:0.024", "crit_r2out:0.011", "default:0.000", "from_mem:0.004"],
+        "ROUTE_TNS": ["all:3.600", "crit_r2out:1.240", "default:0.000", "from_mem:0.300"],
+        "ROUTE_NVP": ["all:275", "crit_r2out:73", "default:0", "from_mem:15"],
+        "WNS": ["0.010", "0.028", "0.024"],
+        "TNS": ["0.120", "4.300", "3.600"],
+        "NVP": ["170", "330", "275"],
+        "PLACE_date": "01/07/2026",
+        "CLOCK_date": "01/08/2026",
+        "ROUTE_date": "01/09/2026",
+        "URL1": "../../proj/mtk32015/DashAI/data/schedule.html",
+        "URL2": "u2_bcpu.csv",
+        "Timestamp": "2026-01-27T08:45:00.000Z"
+      }
+    };
+
+    const STAGES = ["PLACE", "CLOCK", "ROUTE"];
+
+    const DEFAULT_COLORS = [
+      "#f59e0b",
+      "#0ea5e9",
+      "#84cc16",
+      "#ef4444",
+      "#8b5cf6",
+      "#14b8a6",
+      "#f97316",
+      "#ec4899",
+      "#22c55e",
+      "#3b82f6"
+    ];
+
+    let rawData = {};
+    let activeCharts = [];
+
+    const userInput = document.getElementById("userInput");
+    const watchlistSelect = document.getElementById("watchlistSelect");
+    const blockSelect = document.getElementById("blockSelect");
+    const pathgroupCheckboxes = document.getElementById("pathgroupCheckboxes");
+    const cardsContainer = document.getElementById("cardsContainer");
+    const summaryChip = document.getElementById("summaryChip");
+    const sourceChip = document.getElementById("sourceChip");
+    const noticeArea = document.getElementById("noticeArea");
+    const applyBtn = document.getElementById("applyBtn");
+    const reloadBtn = document.getElementById("reloadBtn");
+
+    function parseKey(key) {
+      const parts = String(key).split("-");
+      return {
+        user: parts[0] || "",
+        watchlist: parts[1] || "",
+        apr: parts[2] || "",
+        block: parts[3] || "",
+        run: parts.slice(4).join("-") || ""
+      };
+    }
+
+    function parseMetricList(metricList) {
+      const out = {};
+      if (!Array.isArray(metricList)) return out;
+
+      for (const item of metricList) {
+        if (typeof item !== "string") continue;
+        const idx = item.indexOf(":");
+        if (idx === -1) continue;
+        const key = item.slice(0, idx).trim();
+        const val = Number(item.slice(idx + 1).trim());
+        out[key] = Number.isFinite(val) ? val : null;
+      }
+      return out;
+    }
+
+    function parseSequentialArray(arr) {
+      if (!Array.isArray(arr)) return [null, null, null];
+      return STAGES.map((_, i) => {
+        const v = Number(arr[i]);
+        return Number.isFinite(v) ? v : null;
+      });
+    }
+
+    function normalizeRecord(key, record) {
+      const meta = parseKey(key);
+      return {
+        key,
+        ...meta,
+        runName: meta.run || record.ID || key,
+        id: record.ID || "",
+        milestone: record.Milestone || "",
+        dftRelease: record["DFT Release"] || "NA",
+        timestamp: record.Timestamp || "",
+        stage: {
+          PLACE: {
+            WNS: parseMetricList(record.PLACE_WNS),
+            TNS: parseMetricList(record.PLACE_TNS),
+            NVP: parseMetricList(record.PLACE_NVP)
+          },
+          CLOCK: {
+            WNS: parseMetricList(record.CLOCK_WNS),
+            TNS: parseMetricList(record.CLOCK_TNS),
+            NVP: parseMetricList(record.CLOCK_NVP)
+          },
+          ROUTE: {
+            WNS: parseMetricList(record.ROUTE_WNS),
+            TNS: parseMetricList(record.ROUTE_TNS),
+            NVP: parseMetricList(record.ROUTE_NVP)
+          }
+        },
+        sequential: {
+          WNS: parseSequentialArray(record.WNS),
+          TNS: parseSequentialArray(record.TNS),
+          NVP: parseSequentialArray(record.NVP)
+        }
+      };
+    }
+
+    function getAllRecords() {
+      return Object.entries(rawData).map(([key, value]) => normalizeRecord(key, value));
+    }
+
+    function uniq(arr) {
+      return [...new Set(arr.filter(Boolean))];
+    }
+
+    function setOptions(selectEl, values) {
+      selectEl.innerHTML = "";
+      if (!values.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No options";
+        selectEl.appendChild(opt);
+        return;
+      }
+
+      values.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function getUserFilteredRecords() {
+      const currentUser = userInput.value.trim();
+      return getAllRecords().filter(r => r.user === currentUser);
+    }
+
+    function rebuildSelectors() {
+      const userRecords = getUserFilteredRecords();
+      const watchlists = uniq(userRecords.map(r => r.watchlist));
+      const prevWatchlist = watchlistSelect.value;
+      const prevBlock = blockSelect.value;
+
+      setOptions(watchlistSelect, watchlists);
+
+      if (watchlists.includes(prevWatchlist)) {
+        watchlistSelect.value = prevWatchlist;
+      }
+
+      const blocks = uniq(
+        userRecords
+          .filter(r => !watchlistSelect.value || r.watchlist === watchlistSelect.value)
+          .map(r => r.block)
+      );
+
+      setOptions(blockSelect, blocks);
+
+      if (blocks.includes(prevBlock)) {
+        blockSelect.value = prevBlock;
+      }
+    }
+
+    function getSelectedRecords() {
+      const currentUser = userInput.value.trim();
+      const watchlist = watchlistSelect.value;
+      const block = blockSelect.value;
+
+      return getAllRecords().filter(r =>
+        r.user === currentUser &&
+        r.watchlist === watchlist &&
+        r.block === block
+      );
+    }
+
+    function extractPathgroups(records) {
+      const set = new Set();
+
+      records.forEach(r => {
+        STAGES.forEach(stage => {
+          Object.keys(r.stage[stage].WNS || {}).forEach(pg => set.add(pg));
+        });
+      });
+
+      return ["Timing Setup Seq", ...[...set].sort()];
+    }
+
+    function renderPathgroupCheckboxes(pathgroups) {
+      pathgroupCheckboxes.innerHTML = "";
+
+      if (!pathgroups.length) {
+        pathgroupCheckboxes.innerHTML = `<div class="small">No graphs available</div>`;
+        return;
+      }
+
+      pathgroups.forEach(pg => {
+        const row = document.createElement("label");
+        row.className = "checkbox-item";
+        row.innerHTML = `
+          <input type="checkbox" class="pg-check" value="${pg}" checked />
+          <span>${pg}</span>
+        `;
+        pathgroupCheckboxes.appendChild(row);
+      });
+    }
+
+    function getSelectedPathgroups() {
+      return Array.from(document.querySelectorAll(".pg-check:checked")).map(el => el.value);
+    }
+
+    function showNotice(msg) {
+      noticeArea.innerHTML = `<div class="notice">${msg}</div>`;
+    }
+
+    function clearNotice() {
+      noticeArea.innerHTML = "";
+    }
+
+    function destroyCharts() {
+      activeCharts.forEach(c => c.destroy());
+      activeCharts = [];
+    }
+
+    function getRunColor(index) {
+      return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+    }
+
+    function absOrNull(v) {
+      if (v === null || v === undefined || v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.abs(n) : null;
+    }
+
+    function buildGraphData(records, pathgroup) {
+      if (pathgroup === "Timing Setup Seq") {
+        return records.map((r, i) => ({
+          label: r.runName,
+          color: getRunColor(i),
+          rawWns: r.sequential.WNS,
+          rawTns: r.sequential.TNS,
+          rawNvp: r.sequential.NVP,
+          plotWns: r.sequential.WNS.map(absOrNull),
+          plotTns: r.sequential.TNS.map(absOrNull),
+          meta: r
+        }));
+      }
+
+      return records.map((r, i) => {
+        const rawWns = STAGES.map(stage => r.stage[stage].WNS[pathgroup] ?? null);
+        const rawTns = STAGES.map(stage => r.stage[stage].TNS[pathgroup] ?? null);
+        const rawNvp = STAGES.map(stage => r.stage[stage].NVP[pathgroup] ?? null);
+
+        return {
+          label: r.runName,
+          color: getRunColor(i),
+          rawWns,
+          rawTns,
+          rawNvp,
+          plotWns: rawWns.map(absOrNull),
+          plotTns: rawTns.map(absOrNull),
+          meta: r
+        };
+      });
+    }
+
+    function renderRunDetails(container, seriesItem) {
+      const stageRows = STAGES.map((stage, idx) => {
+        const wns = seriesItem.rawWns[idx];
+        const tns = seriesItem.rawTns[idx];
+        const nvp = seriesItem.rawNvp[idx];
+
+        return `
+          <tr>
+            <td>${stage}</td>
+            <td>${wns ?? ""}</td>
+            <td>${tns ?? ""}</td>
+            <td>${nvp ?? ""}</td>
+          </tr>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="run-title">${seriesItem.label}</div>
+        <div class="run-sub">DFT Release: ${seriesItem.meta.dftRelease}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>WNS</th>
+              <th>TNS</th>
+              <th>NVP</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stageRows}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function createCard(pathgroup, series) {
+      const card = document.createElement("div");
+      card.className = "graph-card";
+
+      const safeId = `chart_${Math.random().toString(36).slice(2)}`;
+      const legendId = `legend_${Math.random().toString(36).slice(2)}`;
+      const detailId = `detail_${Math.random().toString(36).slice(2)}`;
+
+      card.innerHTML = `
+        <div class="graph-layout">
+          <div class="chart-wrap">
+            <canvas id="${safeId}"></canvas>
+          </div>
+          <div class="side-panel">
+            <div class="legend-boxes" id="${legendId}"></div>
+            <div id="${detailId}"></div>
+          </div>
+        </div>
+      `;
+
+      cardsContainer.appendChild(card);
+
+      const legendBox = card.querySelector(`#${legendId}`);
+      const detailBox = card.querySelector(`#${detailId}`);
+
+      series.forEach((s, idx) => {
+        const el = document.createElement("div");
+        el.className = "legend-item" + (idx === 0 ? " active" : "");
+        el.style.background = s.color;
+        el.title = s.label;
+        el.addEventListener("click", () => {
+          legendBox.querySelectorAll(".legend-item").forEach(x => x.classList.remove("active"));
+          el.classList.add("active");
+          renderRunDetails(detailBox, s);
+        });
+        legendBox.appendChild(el);
+      });
+
+      if (series[0]) {
+        renderRunDetails(detailBox, series[0]);
+      }
+
+      const ctx = card.querySelector(`#${safeId}`).getContext("2d");
+      const datasets = [];
+
+      series.forEach(s => {
+        datasets.push({
+          type: "bar",
+          label: `${s.label} TNS`,
+          data: s.plotTns,
+          backgroundColor: s.color,
+          borderColor: s.color,
+          yAxisID: "y1",
+          order: 2,
+          barPercentage: 0.72,
+          categoryPercentage: 0.72
+        });
+
+        datasets.push({
+          type: "line",
+          label: `${s.label} WNS`,
+          data: s.plotWns,
+          borderColor: s.color,
+          backgroundColor: s.color,
+          yAxisID: "y",
+          order: 1,
+          tension: 0.2,
+          fill: false,
+          pointRadius: 4,
+          pointHoverRadius: 5
+        });
+      });
+
+      const chart = new Chart(ctx, {
+        data: {
+          labels: STAGES,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+          plugins: {
+            title: {
+                display: true,
+                text: pathgroup === "Timing Setup Seq" ? "Timing Setup Seq" : `Pathgroup: ${pathgroup}`
+            },
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.dataset.label || "";
+                  const value = context.parsed.y;
+                  return `${label}: ${value}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              type: "linear",
+              position: "left",
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "WNS"
+              }
+            },
+            y1: {
+              type: "linear",
+              position: "right",
+              beginAtZero: true,
+              grid: {
+                drawOnChartArea: false
+              },
+              title: {
+                display: true,
+                text: "TNS"
+              }
+            }
+          }
+        }
+      });
+
+      activeCharts.push(chart);
+    }
+
+    function renderViewer() {
+      destroyCharts();
+      cardsContainer.innerHTML = "";
+
+      const records = getSelectedRecords();
+      const selectedPathgroups = getSelectedPathgroups();
+
+      if (!records.length) {
+        summaryChip.textContent = "No matching runs";
+        cardsContainer.innerHTML = `<div class="empty">No runs found for selected user, watchlist, and block.</div>`;
+        return;
+      }
+
+      summaryChip.textContent = `${records.length} runs loaded`;
+
+      if (!selectedPathgroups.length) {
+        cardsContainer.innerHTML = `<div class="empty">Select at least one graph.</div>`;
+        return;
+      }
+
+      selectedPathgroups.forEach(pg => {
+        const series = buildGraphData(records, pg);
+        createCard(pg, series);
+      });
+    }
+
+    function populateAndRender() {
+      rebuildSelectors();
+
+      const selectedRecords = getSelectedRecords();
+      const pathgroups = extractPathgroups(selectedRecords);
+      renderPathgroupCheckboxes(pathgroups);
+      renderViewer();
+    }
+
+    async function loadData() {
+      clearNotice();
+
+      try {
+        const res = await fetch("/api/list", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+
+        if (json && typeof json === "object") {
+          rawData = json.data && typeof json.data === "object" ? json.data : json;
+          sourceChip.textContent = "Source: api/list";
+          return;
+        }
+
+        throw new Error("Invalid JSON structure");
+      } catch (err) {
+        rawData = FALLBACK_DATA;
+        sourceChip.textContent = "Source: fallback";
+        showNotice("Could not load /api/list. Fallback data is being used.");
+      }
+    }
+
+    function onFilterChanged() {
+      rebuildSelectors();
+      const selectedRecords = getSelectedRecords();
+      renderPathgroupCheckboxes(extractPathgroups(selectedRecords));
+      renderViewer();
+    }
+
+    function attachEvents() {
+      userInput.addEventListener("change", onFilterChanged);
+
+      watchlistSelect.addEventListener("change", () => {
+        const userRecords = getUserFilteredRecords();
+        const blocks = uniq(
+          userRecords
+            .filter(r => r.watchlist === watchlistSelect.value)
+            .map(r => r.block)
+        );
+        setOptions(blockSelect, blocks);
+
+        const selectedRecords = getSelectedRecords();
+        renderPathgroupCheckboxes(extractPathgroups(selectedRecords));
+        renderViewer();
+      });
+
+      blockSelect.addEventListener("change", () => {
+        const selectedRecords = getSelectedRecords();
+        renderPathgroupCheckboxes(extractPathgroups(selectedRecords));
+        renderViewer();
+      });
+
+      pathgroupCheckboxes.addEventListener("change", () => {
+        renderViewer();
+      });
+
+      applyBtn.addEventListener("click", () => {
+        const selectedRecords = getSelectedRecords();
+        renderPathgroupCheckboxes(extractPathgroups(selectedRecords));
+        renderViewer();
+      });
+
+      reloadBtn.addEventListener("click", async () => {
+        await loadData();
+        populateAndRender();
+      });
+    }
+
+    async function init() {
+      attachEvents();
+      await loadData();
+      populateAndRender();
+    }
+
+    init();
+  </script>
+</body>
+</html>
