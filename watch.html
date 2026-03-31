@@ -3,18 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>W2UI Row Watchlist</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/w2ui@2.0.0/w2ui-2.0.min.css" />
+  <title>W2UI Watchlist</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/w2ui@2.0.0/w2ui-2.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/w2ui@2.0.0/w2ui-2.0.min.css" rel="stylesheet">
+
   <style>
     html, body {
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
     }
+
     #grid {
       width: 100%;
       height: 420px;
     }
+
     .watch-btn {
       padding: 4px 10px;
       border: 1px solid #999;
@@ -23,331 +28,56 @@
       cursor: pointer;
       font-size: 12px;
     }
+
     .watch-btn:hover {
       background: #e9e9e9;
+    }
+
+    .section-box {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 14px;
+      background: #fafafa;
+    }
+
+    .row-flex {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .row-flex select,
+    .row-flex input {
+      min-width: 220px;
+      height: 34px;
+      padding: 6px 8px;
+      box-sizing: border-box;
     }
   </style>
 </head>
 <body>
   <div id="grid"></div>
 
-  <script type="module">
-    import { w2grid, w2popup, w2alert, w2confirm } from 'https://cdn.jsdelivr.net/npm/w2ui@2.0/+esm';
+  <script>
+    const CURRENT_USER = 'user1';
+    const DEFAULT_WATCHLIST = 'mainlist';
+    const MAINLIST_MAX_PER_BLOCK = 3;
+    const OTHERLIST_MAX_PER_BLOCK = 5;
 
-    const WATCHLIST_KEY = 'watchlists_store_v2';
-    const MAIN_WATCHLIST = 'mainlist';
-    const MAX_RUNS_PER_BLOCK = 3;
-
-    function normalizeWatchlists(data) {
-      const out = {};
-
-      for (const [name, items] of Object.entries(data || {})) {
-        out[name] = Array.isArray(items)
-          ? items
-              .map(item => {
-                if (typeof item === 'string') {
-                  return { run: item, block: '' };
-                }
-                return {
-                  run: String(item?.run || ''),
-                  block: String(item?.block || '')
-                };
-              })
-              .filter(item => item.run)
-          : [];
-      }
-
-      if (!out[MAIN_WATCHLIST]) {
-        out[MAIN_WATCHLIST] = [];
-      }
-
-      return out;
-    }
-
-    function getWatchlists() {
-      try {
-        const raw = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '{}');
-        const normalized = normalizeWatchlists(raw);
-        saveWatchlists(normalized);
-        return normalized;
-      } catch (e) {
-        const fallback = { [MAIN_WATCHLIST]: [] };
-        saveWatchlists(fallback);
-        return fallback;
-      }
-    }
-
-    function saveWatchlists(data) {
-      localStorage.setItem(WATCHLIST_KEY, JSON.stringify(normalizeWatchlists(data)));
-    }
-
-    function getRunFromRecord(record) {
-      return record.run || record.name || record.run_name || String(record.recid);
-    }
-
-    function getBlockFromRecord(record) {
-      return record.block || '';
-    }
-
-    function fillWatchlistDropdown(selectedName = '') {
-      const select = document.getElementById('watchlistSelect');
-      if (!select) return;
-
-      const data = getWatchlists();
-      const names = Object.keys(data).sort((a, b) => {
-        if (a === MAIN_WATCHLIST) return -1;
-        if (b === MAIN_WATCHLIST) return 1;
-        return a.localeCompare(b);
-      });
-
-      select.innerHTML = '';
-
-      for (const name of names) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        if (name === selectedName) opt.selected = true;
-        select.appendChild(opt);
-      }
-
-      if (!select.value && names.length > 0) {
-        select.value = names[0];
-      }
-
-      updateDeleteWatchlistButtonState();
-      renderWatchlistRuns();
-    }
-
-    function updateDeleteWatchlistButtonState() {
-      const select = document.getElementById('watchlistSelect');
-      const btn = document.getElementById('deleteWatchlistBtn');
-      if (!select || !btn) return;
-
-      btn.disabled = select.value === MAIN_WATCHLIST;
-    }
-
-    function renderWatchlistRuns() {
-      const select = document.getElementById('watchlistSelect');
-      const listBox = document.getElementById('watchlistRunsBox');
-      const countEl = document.getElementById('watchlistCount');
-
-      if (!select || !listBox || !countEl) return;
-
-      const data = getWatchlists();
-      const watchlistName = select.value;
-      const runs = watchlistName && data[watchlistName] ? data[watchlistName] : [];
-
-      listBox.innerHTML = '';
-
-      for (const item of runs) {
-        const opt = document.createElement('option');
-        opt.value = JSON.stringify(item);
-        opt.textContent = `${item.block || 'NA'} | ${item.run}`;
-        listBox.appendChild(opt);
-      }
-
-      countEl.textContent = `Runs: ${runs.length}`;
-      updateDeleteWatchlistButtonState();
-    }
-
-    window.renderWatchlistRuns = renderWatchlistRuns;
-
-    window.createWatchlist = function createWatchlist() {
-      const input = document.getElementById('newWatchlistName');
-      if (!input) return;
-
-      const name = input.value.trim();
-      if (!name) {
-        w2alert('Enter a watchlist name');
-        return;
-      }
-
-      const data = getWatchlists();
-      if (data[name]) {
-        w2alert('Watchlist already exists');
-        return;
-      }
-
-      data[name] = [];
-      saveWatchlists(data);
-      input.value = '';
-      fillWatchlistDropdown(name);
-    };
-
-    window.deleteWatchlist = function deleteWatchlist() {
-      const select = document.getElementById('watchlistSelect');
-      if (!select || !select.value) {
-        w2alert('Select a watchlist');
-        return;
-      }
-
-      const name = select.value;
-
-      if (name === MAIN_WATCHLIST) {
-        w2alert('mainlist cannot be deleted');
-        return;
-      }
-
-      w2confirm(`Delete watchlist "${name}"?`)
-        .yes(() => {
-          const data = getWatchlists();
-          delete data[name];
-          saveWatchlists(data);
-          fillWatchlistDropdown(MAIN_WATCHLIST);
-        });
-    };
-
-    window.addCurrentRunToWatchlist = function addCurrentRunToWatchlist() {
-      const select = document.getElementById('watchlistSelect');
-      const currentRunEl = document.getElementById('currentRunValue');
-      const currentBlockEl = document.getElementById('currentBlockValue');
-
-      if (!select || !select.value) {
-        w2alert('Select a watchlist first');
-        return;
-      }
-
-      const run = currentRunEl ? currentRunEl.textContent.trim() : '';
-      const block = currentBlockEl ? currentBlockEl.textContent.trim() : '';
-
-      if (!run) {
-        w2alert('No run selected');
-        return;
-      }
-
-      const data = getWatchlists();
-      const watchlistName = select.value;
-      const currentItems = Array.isArray(data[watchlistName]) ? [...data[watchlistName]] : [];
-
-      const alreadyExists = currentItems.some(item => item.run === run && item.block === block);
-      if (alreadyExists) {
-        w2alert(`"${run}" already exists in "${watchlistName}"`);
-        return;
-      }
-
-      if (watchlistName === MAIN_WATCHLIST) {
-        const sameBlockCount = currentItems.filter(item => item.block === block).length;
-        if (sameBlockCount >= MAX_RUNS_PER_BLOCK) {
-          w2alert(`Maximum ${MAX_RUNS_PER_BLOCK} runs allowed for block "${block}" in "${watchlistName}". Delete an existing run first.`);
-          return;
-        }
-      }
-
-      currentItems.push({ run, block });
-      currentItems.sort((a, b) => {
-        const blockCmp = String(a.block).localeCompare(String(b.block));
-        if (blockCmp !== 0) return blockCmp;
-        return String(a.run).localeCompare(String(b.run));
-      });
-
-      data[watchlistName] = currentItems;
-      saveWatchlists(data);
-      renderWatchlistRuns();
-      w2alert(`Added "${run}" under block "${block}" to "${watchlistName}"`);
-    };
-
-    window.deleteSelectedRunFromWatchlist = function deleteSelectedRunFromWatchlist() {
-      const select = document.getElementById('watchlistSelect');
-      const listBox = document.getElementById('watchlistRunsBox');
-
-      if (!select || !select.value) {
-        w2alert('Select a watchlist first');
-        return;
-      }
-
-      if (!listBox || !listBox.value) {
-        w2alert('Select a run to delete');
-        return;
-      }
-
-      let selectedItem;
-      try {
-        selectedItem = JSON.parse(listBox.value);
-      } catch (e) {
-        w2alert('Invalid selected run');
-        return;
-      }
-
-      const data = getWatchlists();
-      const watchlistName = select.value;
-      data[watchlistName] = (data[watchlistName] || []).filter(item => {
-        return !(item.run === selectedItem.run && item.block === selectedItem.block);
-      });
-
-      saveWatchlists(data);
-      renderWatchlistRuns();
-    };
-
-    window.openWatchlistPopupForRun = function openWatchlistPopupForRun(run, block) {
-      w2popup.open({
-        title: 'Manage Watchlist',
-        width: 760,
-        height: 560,
-        modal: true,
-        showMax: false,
-        body: `
-          <div style="padding:16px; box-sizing:border-box; height:100%; font-family:Arial,sans-serif;">
-
-            <div style="margin-bottom:16px; padding:10px; background:#f7f7f7; border:1px solid #ddd; border-radius:4px;">
-              <div style="font-weight:600; margin-bottom:6px;">Current Row</div>
-              <div style="font-size:14px; margin-bottom:4px;"><strong>Block:</strong> <span id="currentBlockValue">${escapeHtml(block)}</span></div>
-              <div style="font-size:14px;"><strong>Run:</strong> <span id="currentRunValue">${escapeHtml(run)}</span></div>
-            </div>
-
-            <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #ddd;">
-              <div style="font-weight:600; margin-bottom:8px;">Create Watchlist</div>
-              <div style="display:flex; gap:10px; align-items:center;">
-                <input id="newWatchlistName" type="text" placeholder="Enter watchlist name"
-                  style="flex:1; height:34px; padding:6px 10px;" />
-                <button class="w2ui-btn" onclick="createWatchlist()">Create</button>
-              </div>
-            </div>
-
-            <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #ddd;">
-              <div style="font-weight:600; margin-bottom:8px;">Select or Delete Watchlist</div>
-              <div style="display:flex; gap:10px; align-items:center;">
-                <select id="watchlistSelect" onchange="renderWatchlistRuns()"
-                  style="flex:1; height:34px; padding:6px 10px;"></select>
-                <button id="deleteWatchlistBtn" class="w2ui-btn" onclick="deleteWatchlist()">Delete Watchlist</button>
-              </div>
-              <div style="margin-top:8px; font-size:12px; color:#666;">
-                mainlist is predefined and cannot be deleted
-              </div>
-            </div>
-
-            <div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #ddd;">
-              <div style="font-weight:600; margin-bottom:8px;">Add Current Row Run</div>
-              <div style="display:flex; gap:10px; align-items:center;">
-                <button class="w2ui-btn" onclick="addCurrentRunToWatchlist()">Add This Run</button>
-              </div>
-              <div style="margin-top:8px; font-size:12px; color:#666;">
-                Maximum ${MAX_RUNS_PER_BLOCK} runs allowed per unique block only in mainlist
-              </div>
-            </div>
-
-            <div>
-              <div style="font-weight:600; margin-bottom:8px;">Runs in Selected Watchlist</div>
-              <div id="watchlistCount" style="margin-bottom:8px; font-size:13px; color:#555;">Runs: 0</div>
-              <select id="watchlistRunsBox" size="10"
-                style="width:100%; height:180px; font-size:14px;"></select>
-
-              <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
-                <button class="w2ui-btn" onclick="deleteSelectedRunFromWatchlist()">Delete Run</button>
-                <button class="w2ui-btn" onclick="w2popup.close()">Close</button>
-              </div>
-            </div>
-          </div>
-        `,
-        onOpen(event) {
-          event.onComplete = () => {
-            fillWatchlistDropdown(MAIN_WATCHLIST);
-          };
-        }
-      });
-    };
+    let fallbackWatchlistObjects = [
+      { key: 'user1-mainlist-APR-BCPU-run_001' },
+      { key: 'user1-mainlist-APR-BCPU-run_004' },
+      { key: 'user1-mainlist-APR-LCPU-run_002' },
+      { key: 'user1-debuglist-APR-MCU-run_003' },
+      { key: 'user1-debuglist-APR-BCPU-run_005' },
+      { key: 'user1-nightly-APR-DSP-run_006' },
+      { key: 'user2-mainlist-APR-MCU-run_020' }
+    ];
 
     function escapeHtml(value) {
-      return String(value)
+      return String(value ?? '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -355,7 +85,481 @@
         .replaceAll("'", '&#39;');
     }
 
-    getWatchlists();
+    function escapeJs(value) {
+      return String(value ?? '')
+        .replaceAll('\\', '\\\\')
+        .replaceAll("'", "\\'");
+    }
+
+    function getRunFromRecord(record) {
+      return String(record?.run || record?.name || record?.run_name || record?.recid || '');
+    }
+
+    function getBlockFromRecord(record) {
+      return String(record?.block || '');
+    }
+
+    function parseWatchKey(key) {
+      const parts = String(key || '').split('-');
+      if (parts.length < 5) return null;
+
+      return {
+        user: parts[0],
+        watchlist: parts[1],
+        apr: parts[2],
+        block: parts[3],
+        run: parts.slice(4).join('-'),
+        key: String(key)
+      };
+    }
+
+    function buildKey(user, watchlist, block, run) {
+      return `${user}-${watchlist}-APR-${block}-${run}`;
+    }
+
+    function getMaxRunsPerBlock(watchlist) {
+      return watchlist === DEFAULT_WATCHLIST ? MAINLIST_MAX_PER_BLOCK : OTHERLIST_MAX_PER_BLOCK;
+    }
+
+    function groupWatchlistsByUser(items, user = CURRENT_USER) {
+      const out = {};
+
+      (Array.isArray(items) ? items : []).forEach(item => {
+        const parsed = parseWatchKey(item?.key);
+        if (!parsed) return;
+        if (parsed.user !== user) return;
+
+        if (!out[parsed.watchlist]) out[parsed.watchlist] = [];
+        out[parsed.watchlist].push({
+          key: parsed.key,
+          user: parsed.user,
+          watchlist: parsed.watchlist,
+          block: parsed.block,
+          run: parsed.run
+        });
+      });
+
+      if (!out[DEFAULT_WATCHLIST]) out[DEFAULT_WATCHLIST] = [];
+      return out;
+    }
+
+    function getSelectedWatchlistName() {
+      const el = document.getElementById('watchlistSelect');
+      return el ? el.value : '';
+    }
+
+    function getSelectedWatchlistRunValue() {
+      const el = document.getElementById('watchlistRunsSelect');
+      return el ? el.value : '';
+    }
+
+    function getNonPlaceholderItems(items) {
+      return (items || []).filter(item => {
+        return !(item.block === '__placeholder__' && item.run === '__placeholder__');
+      });
+    }
+
+    function getBlockRunCount(watchlists, watchlist, block) {
+      const items = getNonPlaceholderItems(watchlists[watchlist] || []);
+      return items.filter(item => item.block === block).length;
+    }
+
+    function hasRunInWatchlist(watchlists, watchlist, block, run) {
+      const items = getNonPlaceholderItems(watchlists[watchlist] || []);
+      return items.some(item => item.block === block && item.run === run);
+    }
+
+    async function fetchWatchlistObjects() {
+      try {
+        const res = await fetch('api/list');
+        if (!res.ok) throw new Error('api/list failed');
+
+        const data = await res.json();
+
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.items)) return data.items;
+        if (Array.isArray(data?.objects)) return data.objects;
+        if (Array.isArray(data?.data)) return data.data;
+
+        throw new Error('Invalid api/list response');
+      } catch (err) {
+        console.warn('Using fallback watchlist data', err);
+        return fallbackWatchlistObjects;
+      }
+    }
+
+    async function postJson(url, payload) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(url + ' failed');
+        return await res.json().catch(() => ({}));
+      } catch (err) {
+        console.warn('Fallback mode for', url, err);
+
+        if (url === 'api/watchlist/create') {
+          const { user, watchlist } = payload || {};
+          if (user && watchlist) {
+            const exists = fallbackWatchlistObjects.some(obj => {
+              const p = parseWatchKey(obj.key);
+              return p && p.user === user && p.watchlist === watchlist;
+            });
+            if (!exists) {
+              fallbackWatchlistObjects.push({
+                key: buildKey(user, watchlist, '__placeholder__', '__placeholder__')
+              });
+            }
+          }
+        }
+
+        if (url === 'api/add') {
+          const { user, watchlist, block, run } = payload || {};
+          if (user && watchlist && block && run) {
+            const key = buildKey(user, watchlist, block, run);
+            const exists = fallbackWatchlistObjects.some(obj => obj.key === key);
+            if (!exists) fallbackWatchlistObjects.push({ key });
+          }
+        }
+
+        if (url === 'api/remove') {
+          const { user, watchlist, block, run } = payload || {};
+          fallbackWatchlistObjects = fallbackWatchlistObjects.filter(obj => {
+            const p = parseWatchKey(obj.key);
+            if (!p) return false;
+            if (p.user !== user) return true;
+            if (p.watchlist !== watchlist) return true;
+            if (block != null && p.block !== block) return true;
+            if (run != null && p.run !== run) return true;
+            return false;
+          });
+
+          ensureDefaultWatchlistInFallback();
+        }
+
+        return { ok: true, fallback: true };
+      }
+    }
+
+    async function deleteRequest(url) {
+      try {
+        const res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) throw new Error(url + ' failed');
+        return await res.json().catch(() => ({}));
+      } catch (err) {
+        console.warn('Fallback delete mode for', url, err);
+
+        const urlObj = new URL(url, window.location.origin);
+        const user = urlObj.searchParams.get('user');
+        const watchlist = urlObj.searchParams.get('watchlist');
+
+        fallbackWatchlistObjects = fallbackWatchlistObjects.filter(obj => {
+          const p = parseWatchKey(obj.key);
+          if (!p) return false;
+          return !(p.user === user && p.watchlist === watchlist);
+        });
+
+        ensureDefaultWatchlistInFallback();
+        return { ok: true, fallback: true };
+      }
+    }
+
+    function ensureDefaultWatchlistInFallback() {
+      const exists = fallbackWatchlistObjects.some(obj => {
+        const p = parseWatchKey(obj.key);
+        return p && p.user === CURRENT_USER && p.watchlist === DEFAULT_WATCHLIST;
+      });
+
+      if (!exists) {
+        fallbackWatchlistObjects.push({
+          key: buildKey(CURRENT_USER, DEFAULT_WATCHLIST, '__placeholder__', '__placeholder__')
+        });
+      }
+    }
+
+    async function refreshWatchlistMenu(preferredWatchlist) {
+      const watchlists = groupWatchlistsByUser(await fetchWatchlistObjects(), CURRENT_USER);
+      renderWatchlistMenu(watchlists, preferredWatchlist);
+    }
+
+    function renderWatchlistMenu(watchlists, preferredWatchlist) {
+      const titleEl = document.getElementById('watchlistMenuTitle');
+      const selectEl = document.getElementById('watchlistSelect');
+      const runsTitleEl = document.getElementById('watchlistRunsTitle');
+      const runsSelectEl = document.getElementById('watchlistRunsSelect');
+      const summaryEl = document.getElementById('watchlistSummary');
+
+      if (!titleEl || !selectEl || !runsTitleEl || !runsSelectEl || !summaryEl) return;
+
+      const names = Object.keys(watchlists).sort((a, b) => {
+        if (a === DEFAULT_WATCHLIST) return -1;
+        if (b === DEFAULT_WATCHLIST) return 1;
+        return a.localeCompare(b);
+      });
+
+      titleEl.textContent = `Watchlists for ${CURRENT_USER}`;
+
+      const targetWatchlist = names.includes(preferredWatchlist)
+        ? preferredWatchlist
+        : (names[0] || DEFAULT_WATCHLIST);
+
+      selectEl.innerHTML = names.map(name => {
+        const selected = name === targetWatchlist ? 'selected' : '';
+        return `<option value="${escapeHtml(name)}" ${selected}>${escapeHtml(name)}</option>`;
+      }).join('');
+
+      const selectedWatchlist = selectEl.value || targetWatchlist || DEFAULT_WATCHLIST;
+
+      let items = getNonPlaceholderItems(watchlists[selectedWatchlist] || []);
+      items = items.slice().sort((a, b) => {
+        const blockCmp = a.block.localeCompare(b.block);
+        if (blockCmp !== 0) return blockCmp;
+        return a.run.localeCompare(b.run);
+      });
+
+      const maxRuns = getMaxRunsPerBlock(selectedWatchlist);
+      summaryEl.textContent = `Selected watchlist: ${selectedWatchlist} | Runs: ${items.length} | Max per block: ${maxRuns}`;
+      runsTitleEl.textContent = `Runs in ${selectedWatchlist}`;
+
+      if (!items.length) {
+        runsSelectEl.innerHTML = `<option value="">No runs in selected watchlist</option>`;
+      } else {
+        runsSelectEl.innerHTML = items.map(item => {
+          const value = `${item.watchlist}|||${item.block}|||${item.run}`;
+          return `<option value="${escapeHtml(value)}">${escapeHtml(item.block)} | ${escapeHtml(item.run)}</option>`;
+        }).join('');
+      }
+    }
+
+    window.onWatchlistSelectChange = async function() {
+      await refreshWatchlistMenu(getSelectedWatchlistName());
+    };
+
+    window.watchlistMenu = async function(gridName, recid) {
+      const grid = w2ui[gridName];
+      const record = grid && grid.get(recid);
+
+      if (!grid || !record) {
+        w2alert('Unable to open watchlist menu for selected row');
+        return;
+      }
+
+      const run = getRunFromRecord(record);
+      const block = getBlockFromRecord(record);
+
+      w2popup.open({
+        title: 'Watchlist',
+        width: 920,
+        height: 680,
+        modal: true,
+        showMax: false,
+        body: `
+          <div style="padding:16px; box-sizing:border-box; height:100%; font-family:Arial,sans-serif; overflow:auto;">
+            <div class="section-box">
+              <div style="font-weight:600; margin-bottom:6px;">Selected Row</div>
+              <div style="font-size:14px; margin-bottom:4px;"><strong>User:</strong> ${escapeHtml(CURRENT_USER)}</div>
+              <div style="font-size:14px; margin-bottom:4px;"><strong>Block:</strong> ${escapeHtml(block)}</div>
+              <div style="font-size:14px;"><strong>Run:</strong> ${escapeHtml(run)}</div>
+            </div>
+
+            <div class="section-box">
+              <div style="font-weight:600; margin-bottom:8px;">Create New Watchlist</div>
+              <div class="row-flex">
+                <input id="newWatchlistName" type="text" placeholder="Enter new watchlist name" />
+                <button class="w2ui-btn" onclick="handleCreateWatchlist()">Create</button>
+              </div>
+            </div>
+
+            <div class="section-box">
+              <div style="font-weight:600; margin-bottom:8px;">Select Watchlist</div>
+              <div class="row-flex">
+                <select id="watchlistSelect" onchange="onWatchlistSelectChange()"></select>
+                <button class="w2ui-btn" onclick="handleAddWatchClick(w2ui['${escapeJs(gridName)}'], ${Number(recid)})">Add Selected Run To Watchlist</button>
+                <button class="w2ui-btn" onclick="handleDeleteWatchlist()">Delete Selected Watchlist</button>
+                <button class="w2ui-btn" onclick="refreshWatchlistMenu(getSelectedWatchlistName())">Refresh</button>
+              </div>
+              <div id="watchlistSummary" style="margin-top:8px; font-size:13px; color:#555;"></div>
+            </div>
+
+            <div class="section-box">
+              <div id="watchlistRunsTitle" style="font-weight:600; margin-bottom:8px;">Runs in Watchlist</div>
+              <div class="row-flex" style="align-items:flex-start;">
+                <select id="watchlistRunsSelect" size="8" style="min-width:350px; height:220px;"></select>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <button class="w2ui-btn" onclick="handleRemoveSelectedFromChosenWatchlist()">Remove Selected Listed Run</button>
+                  <button class="w2ui-btn" onclick="handleRemoveWatchClick(w2ui['${escapeJs(gridName)}'], ${Number(recid)})">Remove Current Row Run From Selected Watchlist</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+              <button class="w2ui-btn" onclick="w2popup.close()">Close</button>
+            </div>
+
+            <div id="watchlistMenuTitle" style="display:none;"></div>
+          </div>
+        `,
+        onOpen(event) {
+          event.onComplete = function() {
+            refreshWatchlistMenu(DEFAULT_WATCHLIST);
+          };
+        }
+      });
+    };
+
+    window.handleCreateWatchlist = async function() {
+      const input = document.getElementById('newWatchlistName');
+      if (!input) return;
+
+      const name = String(input.value || '').trim();
+      if (!name) {
+        w2alert('Enter watchlist name');
+        return;
+      }
+
+      const invalid = ['-', '|||'].some(x => name.includes(x));
+      if (invalid) {
+        w2alert('Watchlist name cannot contain hyphen or |||');
+        return;
+      }
+
+      const existing = groupWatchlistsByUser(await fetchWatchlistObjects(), CURRENT_USER);
+      if (existing[name]) {
+        w2alert(`Watchlist ${name} already exists`);
+        return;
+      }
+
+      await postJson('api/watchlist/create', {
+        user: CURRENT_USER,
+        watchlist: name
+      });
+
+      input.value = '';
+      await refreshWatchlistMenu(name);
+      w2alert(`Created watchlist ${name}`);
+    };
+
+    window.handleDeleteWatchlist = async function() {
+      const watchlist = getSelectedWatchlistName();
+      if (!watchlist) {
+        w2alert('Select a watchlist');
+        return;
+      }
+
+      if (watchlist === DEFAULT_WATCHLIST) {
+        w2alert('mainlist cannot be deleted');
+        return;
+      }
+
+      w2confirm(`Delete watchlist ${watchlist}?`)
+        .yes(async function() {
+          await deleteRequest(`api/watchlist/delete?user=${encodeURIComponent(CURRENT_USER)}&watchlist=${encodeURIComponent(watchlist)}`);
+          await refreshWatchlistMenu(DEFAULT_WATCHLIST);
+          w2alert(`Deleted watchlist ${watchlist}`);
+        });
+    };
+
+    window.handleAddWatchClick = async function(grid, recid) {
+      const record = grid && grid.get(recid);
+      if (!record) {
+        w2alert('Record not found');
+        return;
+      }
+
+      const watchlist = getSelectedWatchlistName();
+      if (!watchlist) {
+        w2alert('Select a watchlist first');
+        return;
+      }
+
+      const block = getBlockFromRecord(record);
+      const run = getRunFromRecord(record);
+
+      const allObjects = await fetchWatchlistObjects();
+      const grouped = groupWatchlistsByUser(allObjects, CURRENT_USER);
+      const maxRuns = getMaxRunsPerBlock(watchlist);
+      const currentCount = getBlockRunCount(grouped, watchlist, block);
+      const alreadyExists = hasRunInWatchlist(grouped, watchlist, block, run);
+
+      if (alreadyExists) {
+        w2alert(`Run ${run} already exists in ${watchlist}`);
+        return;
+      }
+
+      if (currentCount >= maxRuns) {
+        w2alert(`Maximum ${maxRuns} runs allowed for block ${block} in ${watchlist}. Remove an existing run before adding a new one.`);
+        return;
+      }
+
+      const payload = {
+        user: CURRENT_USER,
+        watchlist: watchlist,
+        block: block,
+        run: run,
+        recid: recid
+      };
+
+      await postJson('api/add', payload);
+      await refreshWatchlistMenu(watchlist);
+      w2alert(`Added ${payload.run} to ${watchlist}`);
+    };
+
+    window.handleRemoveWatchClick = async function(grid, recid) {
+      const record = grid && grid.get(recid);
+      if (!record) {
+        w2alert('Record not found');
+        return;
+      }
+
+      const watchlist = getSelectedWatchlistName();
+      if (!watchlist) {
+        w2alert('Select a watchlist first');
+        return;
+      }
+
+      const payload = {
+        user: CURRENT_USER,
+        watchlist: watchlist,
+        block: getBlockFromRecord(record),
+        run: getRunFromRecord(record),
+        recid: recid
+      };
+
+      await postJson('api/remove', payload);
+      await refreshWatchlistMenu(watchlist);
+      w2alert(`Removed ${payload.run} from ${watchlist}`);
+    };
+
+    window.handleRemoveSelectedFromChosenWatchlist = async function() {
+      const raw = getSelectedWatchlistRunValue();
+      if (!raw) {
+        w2alert('Select a listed run to remove');
+        return;
+      }
+
+      const parts = raw.split('|||');
+      if (parts.length !== 3) {
+        w2alert('Invalid selected run');
+        return;
+      }
+
+      const watchlist = parts[0];
+      const block = parts[1];
+      const run = parts[2];
+
+      await postJson('api/remove', {
+        user: CURRENT_USER,
+        watchlist: watchlist,
+        block: block,
+        run: run
+      });
+
+      await refreshWatchlistMenu(watchlist);
+      w2alert(`Removed ${run} from ${watchlist}`);
+    };
 
     new w2grid({
       name: 'grid',
@@ -365,21 +569,19 @@
         footer: true
       },
       columns: [
-        { field: 'recid', text: 'ID', size: '70px' },
+        { field: 'recid', text: 'ID', size: '60px' },
         { field: 'block', text: 'Block', size: '120px' },
         { field: 'run', text: 'Run', size: '180px' },
         { field: 'owner', text: 'Owner', size: '120px' },
         { field: 'status', text: 'Status', size: '120px' },
         {
-          field: 'watcher',
-          text: 'Add to Watcher',
-          size: '150px',
+          field: 'watch',
+          text: 'Watchlist',
+          size: '120px',
           sortable: false,
           searchable: false,
-          render(record) {
-            const run = String(getRunFromRecord(record)).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
-            const block = String(getBlockFromRecord(record)).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
-            return `<button class="watch-btn" onclick="openWatchlistPopupForRun('${run}', '${block}')">Watchlist</button>`;
+          render: function(record) {
+            return `<button class="watch-btn" onclick="watchlistMenu('grid', ${record.recid})">Watch</button>`;
           }
         }
       ],
@@ -389,7 +591,10 @@
         { recid: 3, block: 'MCU', run: 'run_003', owner: 'carol', status: 'failed' },
         { recid: 4, block: 'BCPU', run: 'run_004', owner: 'dave', status: 'running' },
         { recid: 5, block: 'BCPU', run: 'run_005', owner: 'emma', status: 'completed' },
-        { recid: 6, block: 'BCPU', run: 'run_006', owner: 'frank', status: 'failed' }
+        { recid: 6, block: 'DSP', run: 'run_006', owner: 'frank', status: 'failed' },
+        { recid: 7, block: 'BCPU', run: 'run_007', owner: 'gina', status: 'completed' },
+        { recid: 8, block: 'BCPU', run: 'run_008', owner: 'harry', status: 'running' },
+        { recid: 9, block: 'BCPU', run: 'run_009', owner: 'ian', status: 'failed' }
       ]
     });
   </script>
